@@ -1,75 +1,20 @@
 {
-  "host": "0.0.0.0",
-  "port": 8787,
   "weather": {
-    "city": "深圳",
-    "lat": 22.54,
-    "lon": 114.06
+    "city": "Toronto",
+    "lat": 43.6532,
+    "lon": -79.3832
   },
-  "fxBase": "USD",
-  "stocks": [
-    {
-      "sym": "SPY",
-      "name": "标普500",
-      "mkt": "US"
-    },
-    {
-      "sym": "QQQ",
-      "name": "纳指100",
-      "mkt": "US"
-    },
-    {
-      "sym": "AAPL",
-      "name": "苹果",
-      "mkt": "US"
-    },
-    {
-      "sym": "MU",
-      "name": "美光",
-      "mkt": "US"
-    },
-    {
-      "sym": "000001.SS",
-      "name": "上证指数",
-      "mkt": "A"
-    },
-    {
-      "sym": "399001.SZ",
-      "name": "深证成指",
-      "mkt": "A"
-    },
-    {
-      "sym": "600519.SS",
-      "name": "贵州茅台",
-      "mkt": "A"
-    },
-    {
-      "sym": "688825.SS",
-      "name": "长鑫科技",
-      "mkt": "A"
-    }
-  ],
-  "clocks": [
-    {
-      "city": "伦敦",
-      "tz": "Europe/London"
-    },
-    {
-      "city": "洛杉矶",
-      "tz": "America/Los_Angeles"
-    },
-    {
-      "city": "纽约",
-      "tz": "America/New_York"
-    },
-    {
-      "city": "德里",
-      "tz": "Asia/Kolkata"
-    }
-  ],
-  "claudeCap": 1000,
-  "codexCap": 500,
   "display": {
-    "timezone": "Asia/Shanghai"
+    "preset": "minimal",
+    "modules": [
+      "weather",
+      "clocks",
+      "quote"
+    ],
+    "width": 1072,
+    "height": 1448,
+    "fontScale": 1,
+    "timezone": "America/Toronto",
+    "temperatureUnit": "C"
   }
 }
