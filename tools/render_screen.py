@@ -286,6 +286,9 @@ def fmt_pct(v):
     if v is None: return '?'
     return '%.1f' % abs(v)
 
+def configured_font(name, fallback):
+    return (LAYOUT or {}).get('fontSizes', {}).get(name, fallback)
+
 # ---------- 数据 ----------
 def fetch_dashboard(url='http://127.0.0.1:8787/api/dashboard'):
     req = urllib.request.Request(url, headers={'User-Agent': 'kindle-dash/1.0'})
@@ -442,11 +445,14 @@ def draw_weather(draw, d, y):
     y = draw_title(draw, y, tr('天气'), w)
     if w.get('ok'):
         t1 = '%s°%s' % (fnum(w.get('temp')), LAYOUT['temperatureUnit'] if LAYOUT else 'C')
-        ft = f(F_BIG, bold=True)
+        ft = f(configured_font('weatherTemperature', F_BIG), bold=True)
         draw.text((PAD, y), t1, fill=BLACK, font=ft)
         tw1 = tw(draw, t1, ft)
         det = ('%s  H%s L%s  RH%s%%' if LANG == 'en' else '%s  高%s 低%s  湿%s%%') % (w.get('text', ''), fnum(w.get('high')), fnum(w.get('low')), w.get('humidity', '?'))
-        draw.text((PAD + tw1 + 24, y + 14), det, fill=GRAY, font=f(F_SMALL))
+        details_font = f(configured_font('weatherDetails', F_SMALL))
+        details_x = PAD + tw1 + 24
+        det = clip(draw, det, details_font, SCREEN_W - PAD - details_x)
+        draw.text((details_x, y + 16), det, fill=GRAY, font=details_font)
         # 温度大字用 56px 字体，实际字形高度超过 F_BIG，固定 y+F_BIG 会让字形底部压过分隔线
         return draw.textbbox((PAD, y), t1, font=ft)[3] + 8
     else:
@@ -472,16 +478,17 @@ def draw_forecast(draw, d, y):
         x0 = round(PAD + i * col)
         x1 = round(PAD + (i + 1) * col)
         if i:
-            draw.line([(x0, y), (x0, y + 104)], fill=LIGHT_GRAY, width=2)
+            draw.line([(x0, y), (x0, y + 118)], fill=LIGHT_GRAY, width=2)
         label = _day_name(day.get('date'))
-        label_font = f(28, bold=True)
+        label_font = f(configured_font('forecastDay', 28), bold=True)
         draw.text((x0 + (x1 - x0 - tw(draw, label, label_font)) / 2, y), label, fill=BLACK, font=label_font)
         temps = '%s° / %s°' % (fnum(day.get('high')), fnum(day.get('low')))
-        temp_font = f(31, bold=True)
-        draw.text((x0 + (x1 - x0 - tw(draw, temps, temp_font)) / 2, y + 37), temps, fill=BLACK, font=temp_font)
-        desc = clip(draw, day.get('text') or '', f(22), x1 - x0 - 12)
-        draw.text((x0 + (x1 - x0 - tw(draw, desc, f(22))) / 2, y + 78), desc, fill=GRAY, font=f(22))
-    return y + 110
+        temp_font = f(configured_font('forecastTemperature', 31), bold=True)
+        draw.text((x0 + (x1 - x0 - tw(draw, temps, temp_font)) / 2, y + 43), temps, fill=BLACK, font=temp_font)
+        desc_font = f(configured_font('forecastDescription', 22))
+        desc = clip(draw, day.get('text') or '', desc_font, x1 - x0 - 12)
+        draw.text((x0 + (x1 - x0 - tw(draw, desc, desc_font)) / 2, y + 89), desc, fill=GRAY, font=desc_font)
+    return y + 120
 
 def draw_calendar(draw, d, y):
     now = display_now()
@@ -494,12 +501,12 @@ def draw_calendar(draw, d, y):
     labels = ['SUN','MON','TUE','WED','THU','FRI','SAT'] if LANG == 'en' else list('日一二三四五六')
     col = CONTENT_W / 7
     for i, label in enumerate(labels):
-        ff = f(22, bold=True)
+        ff = f(configured_font('calendarWeekday', 22), bold=True)
         x = PAD + i * col + (col - tw(draw, label, ff)) / 2
         draw.text((x, y), label, fill=GRAY, font=ff)
-    y += 31
-    cell_h = 66
-    number_font = f(30, bold=True)
+    y += 36
+    cell_h = 62
+    number_font = f(configured_font('calendarDate', 30), bold=True)
     for row, week in enumerate(weeks):
         cy = y + row * cell_h
         for col_i, day in enumerate(week):

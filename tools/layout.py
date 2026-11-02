@@ -42,5 +42,17 @@ def load_layout(path='config.json'):
     }
     if any(not isinstance(v, int) or not 0 <= v <= 60 for v in spacing.values()):
         raise ValueError('Display spacing values must be integers from 0 to 60')
+    font_defaults = {
+        'weatherTemperature': 56, 'weatherDetails': 27,
+        'forecastDay': 28, 'forecastTemperature': 31, 'forecastDescription': 22,
+        'calendarWeekday': 22, 'calendarDate': 30,
+    }
+    raw_font_sizes = cfg.get('fontSizes', {})
+    if not isinstance(raw_font_sizes, dict):
+        raise ValueError('Display fontSizes must be an object')
+    font_sizes = {key: raw_font_sizes.get(key, value) for key, value in font_defaults.items()}
+    if any(not isinstance(v, int) or not 12 <= v <= 160 for v in font_sizes.values()):
+        raise ValueError('Display fontSizes values must be integers from 12 to 160')
     return dict(modules=modules, width=width, height=height, fontScale=scale,
-                timezone=timezone, temperatureUnit=unit, preset=preset, spacing=spacing)
+                timezone=timezone, temperatureUnit=unit, preset=preset, spacing=spacing,
+                fontSizes=font_sizes)

@@ -25,6 +25,15 @@
     "width": 1072,
     "height": 1448,
     "fontScale": 1,
+    "fontSizes": {
+      "weatherTemperature": 64,
+      "weatherDetails": 31,
+      "forecastDay": 30,
+      "forecastTemperature": 32,
+      "forecastDescription": 25,
+      "calendarWeekday": 26,
+      "calendarDate": 30
+    },
     "spacing": {
       "timeToDate": 18,
       "weatherToForecast": 18,
