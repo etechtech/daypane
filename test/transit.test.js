@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { decodeFeed, parseTransitFeed } from '../src/providers/transit.js';
+import { decodeFeed, parseTransitFeed, parseUmoPredictions } from '../src/providers/transit.js';
 
 const v = value => {
   const out = [];
@@ -52,4 +52,21 @@ test('minimal decoder reads TTC trip update fields without a runtime protobuf de
   assert.equal(feed.entity[0].tripUpdate.trip.directionId, 1);
   assert.equal(feed.entity[0].tripUpdate.stopTimeUpdate[0].stopId, '1234');
   assert.equal(feed.entity[0].tripUpdate.stopTimeUpdate[0].arrival.time, 2_000_000_180);
+});
+
+test('UmoIQ stop predictions accept singleton JSON objects and retain route filtering', () => {
+  const data = { predictions: {
+    routeTag: '161', stopTitle: 'Dovercourt Rd At Dupont St',
+    direction: { title: 'East - 161 Rogers Rd', prediction: [
+      { minutes: '9', epochTime: '2000000540000', branch: '161' },
+      { minutes: '26', epochTime: '2000001560000', branch: '161' }
+    ] }
+  } };
+  const result = parseUmoPredictions(data, {
+    stopId: '10766', stopName: 'Dovercourt Rd at Dupont St', routes: ['161'], directionLabel: 'Eastbound'
+  });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.items.map(x => x.minutes), [9, 26]);
+  assert.equal(result.items[0].route, '161');
+  assert.equal(result.items[0].directionLabel, 'Eastbound');
 });

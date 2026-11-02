@@ -1,7 +1,44 @@
-import { cached } from '../cache.js';
+import { cached, fetchJson } from '../cache.js';
 import { getConfig } from '../config.js';
 
 const FEED_URL = 'https://bustime.ttc.ca/gtfsrt/trips';
+const PREDICTIONS_URL = 'https://webservices.umoiq.com/service/publicJSONFeed?a=ttc&command=predictions&stopId=';
+
+const array = value => value == null ? [] : Array.isArray(value) ? value : [value];
+
+export function parseUmoPredictions(data, cfg) {
+  if (!data || data.Error) {
+    return { ok: false, configured: true, items: [], error: data?.Error?.content || 'prediction feed error' };
+  }
+  const routeFilter = new Set((cfg.routes || []).map(String));
+  const items = [];
+  for (const group of array(data.predictions)) {
+    const route = String(group.routeTag || '');
+    if (routeFilter.size && !routeFilter.has(route)) continue;
+    for (const direction of array(group.direction)) {
+      for (const prediction of array(direction.prediction)) {
+        const minutes = Number(prediction.minutes);
+        const arrivalTime = Number(prediction.epochTime);
+        if (!Number.isFinite(minutes)) continue;
+        items.push({
+          route: route || String(prediction.branch || '?'),
+          directionLabel: cfg.directionLabel || direction.title || '',
+          minutes: Math.max(0, Math.round(minutes)),
+          arrivalTime: Number.isFinite(arrivalTime) ? arrivalTime : Date.now() + minutes * 60000
+        });
+      }
+    }
+  }
+  items.sort((a, b) => a.arrivalTime - b.arrivalTime);
+  return {
+    ok: true,
+    configured: true,
+    stopId: String(cfg.stopId),
+    stopName: cfg.stopName || array(data.predictions)[0]?.stopTitle || `Stop ${cfg.stopId}`,
+    items: items.slice(0, 6),
+    source: 'TTC UmoIQ predictions'
+  };
+}
 
 function varint(bytes, cursor) {
   let value = 0n;
@@ -142,6 +179,11 @@ export async function getTransit() {
     return { ok: false, configured: false, items: [], stopName: cfg.stopName, error: 'stop not configured' };
   }
   return cached(`ttc:${cfg.stopId}:${(cfg.routes || []).join(',')}:${cfg.direction ?? ''}`, 60 * 1000, async () => {
+    const predictions = await fetchJson(PREDICTIONS_URL + encodeURIComponent(cfg.stopId), { timeoutMs: 12000 });
+    if (predictions.ok) {
+      const parsed = parseUmoPredictions(predictions.data, cfg);
+      if (parsed.ok) return parsed;
+    }
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 10000);
     try {
@@ -152,9 +194,12 @@ export async function getTransit() {
       if (!response.ok) return { ok: false, configured: true, items: [], error: `http ${response.status}` };
       const bytes = new Uint8Array(await response.arrayBuffer());
       const feed = decodeFeed(bytes);
-      return parseTransitFeed(feed, cfg);
+      const parsed = parseTransitFeed(feed, cfg);
+      if (parsed.ok) return parsed;
+      return { ...parsed, error: `${predictions.error || 'UmoIQ unavailable'}; ${parsed.error || 'GTFS unavailable'}` };
     } catch (error) {
-      return { ok: false, configured: true, items: [], error: error.name === 'AbortError' ? 'timeout' : error.message };
+      const gtfsError = error.name === 'AbortError' ? 'timeout' : error.message;
+      return { ok: false, configured: true, items: [], error: `${predictions.error || 'UmoIQ unavailable'}; ${gtfsError}` };
     } finally {
       clearTimeout(timer);
     }
