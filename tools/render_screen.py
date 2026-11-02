@@ -314,8 +314,9 @@ def draw_header(draw, d, y):
     else:
         date_line = '%d年%d月%d日 周%s' % (now.year, now.month, now.day, '一二三四五六日'[now.weekday()])
     date_font = f(40, bold=True)
-    draw.text((PAD, y + 126), date_line, fill=BLACK, font=date_font)
-    return y + 215
+    time_date_gap = LAYOUT.get('spacing', {}).get('timeToDate', 0)
+    draw.text((PAD, y + 126 + time_date_gap), date_line, fill=BLACK, font=date_font)
+    return y + 215 + time_date_gap
 
 def stamp_label(src):
     """把模块数据里的 fetchedAt 变成右上角的时间标注。
@@ -714,11 +715,14 @@ def render(d, out_path=None, language="zh"):
         'mlb': lambda y: draw_mlb(draw, d, y),
         'quote': lambda y: draw_quote(draw, d, y, quotes),
     }
-    mods = [registry[name] for name in LAYOUT['modules']]
-    for fn in mods:
-        y = fn(y)
+    for name in LAYOUT['modules']:
+        y = registry[name](y)
         hline(draw, y + 4, GRAY, 1)
         y += 14
+        if name == 'weather':
+            y += LAYOUT.get('spacing', {}).get('weatherToForecast', 0)
+        elif name == 'forecast':
+            y += LAYOUT.get('spacing', {}).get('forecastToCalendar', 0)
     y = draw_footer(draw, d, y)
 
     print('[render] final_y=%d screen_h=%d margin=%d' % (y, SCREEN_H, SCREEN_H - y), file=sys.stderr, flush=True)

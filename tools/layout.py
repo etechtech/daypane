@@ -32,5 +32,15 @@ def load_layout(path='config.json'):
     unit = cfg.get('temperatureUnit', 'C')
     if unit not in ('C', 'F'):
         raise ValueError('temperatureUnit must be C or F')
+    raw_spacing = cfg.get('spacing', {})
+    if not isinstance(raw_spacing, dict):
+        raise ValueError('Display spacing must be an object')
+    spacing = {
+        'timeToDate': raw_spacing.get('timeToDate', 0),
+        'weatherToForecast': raw_spacing.get('weatherToForecast', 0),
+        'forecastToCalendar': raw_spacing.get('forecastToCalendar', 0),
+    }
+    if any(not isinstance(v, int) or not 0 <= v <= 60 for v in spacing.values()):
+        raise ValueError('Display spacing values must be integers from 0 to 60')
     return dict(modules=modules, width=width, height=height, fontScale=scale,
-                timezone=timezone, temperatureUnit=unit, preset=preset)
+                timezone=timezone, temperatureUnit=unit, preset=preset, spacing=spacing)
