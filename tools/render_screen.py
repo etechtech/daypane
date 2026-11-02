@@ -503,7 +503,9 @@ def draw_calendar(draw, d, y):
         x = PAD + i * col + (col - tw(draw, label, ff)) / 2
         draw.text((x, y), label, fill=GRAY, font=ff)
     y += 36
-    cell_h = 62 if len(weeks) <= 5 else 53
+    # Noto CJK's 140px temperature glyphs are taller than Arial's. Keep calendar
+    # rows compact enough that both CI locales retain a safe bottom margin.
+    cell_h = 54 if len(weeks) <= 5 else 50
     number_font = f(configured_font('calendarDate', 30), bold=True)
     for row, week in enumerate(weeks):
         cy = y + row * cell_h
