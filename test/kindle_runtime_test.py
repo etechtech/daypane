@@ -30,10 +30,10 @@ class RuntimeTests(unittest.TestCase):
             d.readMetadata=function() return {} end
             d.endpoints=function() return {{url='https://example.test/manifest.json',name='Cloud'}} end
             TEST_META={schemaVersion=1,sha256=HASH,generatedAt=os.time()*1000,image_url='image.png',width=1072,height=1448}
-            d.request=function(_,url) if url:match('json$') then return 'manifest' end;return PNG..'bad' end
+            d.request=function(_,url) if url:match('manifest%.json') then return 'manifest' end;return PNG..'bad' end
             assert(d:fetchScreen()==nil)
             local f=io.open(CACHE,'rb');assert(f:read('*a')=='previous-good-image');f:close()
-            d.request=function(_,url) return url:match('json$') and 'manifest' or PNG end
+            d.request=function(_,url) return url:match('manifest%.json') and 'manifest' or PNG end
             local bytes=d:fetchScreen();assert(bytes==PNG)
             DECODE_FAIL=true;assert(not d:writePng(CACHE,bytes))
             f=io.open(CACHE,'rb');assert(f:read('*a')=='previous-good-image');f:close()

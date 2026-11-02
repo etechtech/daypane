@@ -38,7 +38,7 @@ local JSON = require("json")
 -- 网络请求超时：电脑关机时不要让用户等太久，8 秒无响应就切换下一级。
 http.TIMEOUT = 8
 
-local VERSION = "0.3.3"
+local VERSION = "0.3.4"
 local REFRESH_SEC = 30 * 60
 local MAX_IMAGE = 4 * 1024 * 1024
 local DEFAULT_HOST = ""
@@ -485,7 +485,11 @@ function KindleDash:request(url, limit)
     local chunks, bytes = {}, 0
     local req = {
         url = url, method = "GET", redirect = false,
-        headers = { ["User-Agent"] = "ShawnKanban/" .. VERSION },
+        headers = {
+            ["User-Agent"] = "ShawnKanban/" .. VERSION,
+            ["Cache-Control"] = "no-cache",
+            ["Pragma"] = "no-cache",
+        },
         sink = function(chunk)
             if chunk then
                 bytes = bytes + #chunk
@@ -525,7 +529,11 @@ function KindleDash:fetchScreen()
         local meta, url = {}, ep.url
         local error_message
         if manifest_url then
-            local raw, err = self:request(manifest_url, 128 * 1024)
+            -- GitHub Pages/CDNs may cache manifest.json for several minutes. A unique
+            -- query plus no-cache headers ensures a 5-minute device interval can see
+            -- the newest immutable image hash as soon as it is deployed.
+            local separator = manifest_url:find("?", 1, true) and "&" or "?"
+            local raw, err = self:request(manifest_url .. separator .. "t=" .. tostring(os.time()), 128 * 1024)
             local ok, value = pcall(JSON.decode, raw or "")
             if not ok or type(value) ~= "table" or value.schemaVersion ~= 1
                 or type(value.sha256) ~= "string" or not value.sha256:match("^%x+$") or #value.sha256 ~= 64
