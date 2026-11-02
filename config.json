@@ -8,7 +8,7 @@
     "preset": "minimal",
     "modules": [
       "weather",
-      "clocks",
+      "clocks"
     ],
     "width": 1072,
     "height": 1448,
