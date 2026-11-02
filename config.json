@@ -26,17 +26,18 @@
     "height": 1448,
     "fontScale": 1,
     "fontSizes": {
-      "weatherTemperature": 64,
-      "weatherDetails": 31,
+      "headerDate": 60,
+      "weatherTemperature": 140,
+      "weatherDetails": 35,
       "forecastDay": 30,
       "forecastTemperature": 32,
       "forecastDescription": 25,
       "calendarWeekday": 26,
-      "calendarDate": 30
+      "calendarDate": 35
     },
     "spacing": {
       "timeToDate": 18,
-      "weatherToForecast": 18,
+      "weatherToForecast": 28,
       "forecastToCalendar": 22
     },
     "timezone": "America/Toronto",

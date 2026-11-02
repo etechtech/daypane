@@ -43,6 +43,7 @@ def load_layout(path='config.json'):
     if any(not isinstance(v, int) or not 0 <= v <= 60 for v in spacing.values()):
         raise ValueError('Display spacing values must be integers from 0 to 60')
     font_defaults = {
+        'headerDate': 40,
         'weatherTemperature': 56, 'weatherDetails': 27,
         'forecastDay': 28, 'forecastTemperature': 31, 'forecastDescription': 22,
         'calendarWeekday': 22, 'calendarDate': 30,

@@ -13,7 +13,7 @@ class LayoutTests(unittest.TestCase):
         self.assertEqual(self.check({'preset':'minimal','temperatureUnit':'F','timezone':'Asia/Shanghai'})['modules'],['weather','clocks','quote'])
         self.assertEqual(self.check({})['width'],1072)
         self.assertEqual(self.check({'spacing':{'timeToDate':18,'weatherToForecast':12,'forecastToCalendar':20}})['spacing']['forecastToCalendar'],20)
-        self.assertEqual(self.check({'fontSizes':{'forecastDescription':25}})['fontSizes']['forecastDescription'],25)
+        self.assertEqual(self.check({'fontSizes':{'headerDate':60,'forecastDescription':25}})['fontSizes']['headerDate'],60)
     def test_invalid_layout_rejected(self):
         for value in [{'modules':['weather','weather']},{'modules':['unknown']},{'width':0},{'fontScale':3},{'temperatureUnit':'K'},{'preset':'bad'},{'spacing':'wide'},{'spacing':{'timeToDate':61}},{'fontSizes':'large'},{'fontSizes':{'forecastDescription':11}}]:
             with self.assertRaises(ValueError):self.check(value)

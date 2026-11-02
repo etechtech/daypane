@@ -316,7 +316,7 @@ def draw_header(draw, d, y):
         date_line = '%s %d, %d' % (now.strftime('%A, %B'), now.day, now.year)
     else:
         date_line = '%d年%d月%d日 周%s' % (now.year, now.month, now.day, '一二三四五六日'[now.weekday()])
-    date_font = f(40, bold=True)
+    date_font = f(configured_font('headerDate', 40), bold=True)
     time_date_gap = LAYOUT.get('spacing', {}).get('timeToDate', 0)
     draw.text((PAD, y + 126 + time_date_gap), date_line, fill=BLACK, font=date_font)
     return y + 215 + time_date_gap
@@ -478,17 +478,17 @@ def draw_forecast(draw, d, y):
         x0 = round(PAD + i * col)
         x1 = round(PAD + (i + 1) * col)
         if i:
-            draw.line([(x0, y), (x0, y + 118)], fill=LIGHT_GRAY, width=2)
+            draw.line([(x0, y), (x0, y + 135)], fill=LIGHT_GRAY, width=2)
         label = _day_name(day.get('date'))
         label_font = f(configured_font('forecastDay', 28), bold=True)
         draw.text((x0 + (x1 - x0 - tw(draw, label, label_font)) / 2, y), label, fill=BLACK, font=label_font)
         temps = '%s° / %s°' % (fnum(day.get('high')), fnum(day.get('low')))
         temp_font = f(configured_font('forecastTemperature', 31), bold=True)
-        draw.text((x0 + (x1 - x0 - tw(draw, temps, temp_font)) / 2, y + 43), temps, fill=BLACK, font=temp_font)
+        draw.text((x0 + (x1 - x0 - tw(draw, temps, temp_font)) / 2, y + 50), temps, fill=BLACK, font=temp_font)
         desc_font = f(configured_font('forecastDescription', 22))
         desc = clip(draw, day.get('text') or '', desc_font, x1 - x0 - 12)
-        draw.text((x0 + (x1 - x0 - tw(draw, desc, desc_font)) / 2, y + 89), desc, fill=GRAY, font=desc_font)
-    return y + 120
+        draw.text((x0 + (x1 - x0 - tw(draw, desc, desc_font)) / 2, y + 105), desc, fill=GRAY, font=desc_font)
+    return y + 142
 
 def draw_calendar(draw, d, y):
     now = display_now()
@@ -496,8 +496,6 @@ def draw_calendar(draw, d, y):
     y = draw_title(draw, y, title)
     cal = calendar.Calendar(firstweekday=6)
     weeks = cal.monthdayscalendar(now.year, now.month)
-    while len(weeks) < 6:
-        weeks.append([0] * 7)
     labels = ['SUN','MON','TUE','WED','THU','FRI','SAT'] if LANG == 'en' else list('日一二三四五六')
     col = CONTENT_W / 7
     for i, label in enumerate(labels):
@@ -505,7 +503,7 @@ def draw_calendar(draw, d, y):
         x = PAD + i * col + (col - tw(draw, label, ff)) / 2
         draw.text((x, y), label, fill=GRAY, font=ff)
     y += 36
-    cell_h = 62
+    cell_h = 62 if len(weeks) <= 5 else 53
     number_font = f(configured_font('calendarDate', 30), bold=True)
     for row, week in enumerate(weeks):
         cy = y + row * cell_h
@@ -516,14 +514,14 @@ def draw_calendar(draw, d, y):
             text = str(day)
             tx = cx + (col - tw(draw, text, number_font)) / 2
             if day == now.day:
-                box = [cx + 30, cy + 2, cx + col - 30, cy + 42]
+                box = [cx + 30, cy + 2, cx + col - 30, cy + 47]
                 draw.rounded_rectangle(box, radius=8, fill=BLACK)
                 draw.text((tx, cy + 3), text, fill=WHITE, font=number_font)
             else:
                 draw.text((tx, cy + 3), text, fill=BLACK, font=number_font)
-        if row < 5:
-            draw.line([(PAD, cy + 46), (SCREEN_W - PAD, cy + 46)], fill=LIGHT_GRAY, width=1)
-    return y + 6 * cell_h
+        if row < len(weeks) - 1:
+            draw.line([(PAD, cy + cell_h - 4), (SCREEN_W - PAD, cy + cell_h - 4)], fill=LIGHT_GRAY, width=1)
+    return y + len(weeks) * cell_h
 
 def _clock_part(value):
     if not value:
@@ -535,7 +533,6 @@ def _clock_part(value):
 
 def draw_sun(draw, d, y):
     w = d.get('weather') or {}
-    y = draw_title(draw, y, tr('日照'), w)
     sunrise, sunset = _clock_part(w.get('sunrise')), _clock_part(w.get('sunset'))
     line = ('Sunrise %s     Sunset %s' if LANG == 'en' else '日出 %s     日落 %s') % (sunrise, sunset)
     draw.text((PAD, y), line, fill=BLACK, font=f(38, bold=True))
