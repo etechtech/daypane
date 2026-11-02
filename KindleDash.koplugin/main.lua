@@ -38,7 +38,7 @@ local JSON = require("json")
 -- 网络请求超时：电脑关机时不要让用户等太久，8 秒无响应就切换下一级。
 http.TIMEOUT = 8
 
-local VERSION = "0.3.4"
+local VERSION = "0.3.5"
 local REFRESH_SEC = 30 * 60
 local MAX_IMAGE = 4 * 1024 * 1024
 local DEFAULT_HOST = ""
@@ -616,6 +616,27 @@ end
 
 -- ---------------- 显示 ----------------
 
+function KindleDash:cancelLocalClock()
+    if self._clock_timer then
+        UIManager:unschedule(self._clock_timer)
+        self._clock_timer = nil
+    end
+end
+
+function KindleDash:armLocalClock()
+    self:cancelLocalClock()
+    if not self.dash_widget or self._suspended then return end
+    local function tick()
+        self._clock_timer = nil
+        if self.dash_widget and not self._suspended then
+            pcall(function() self.dash_widget:updateLocalClock() end)
+            self:armLocalClock()
+        end
+    end
+    self._clock_timer = tick
+    UIManager:scheduleIn(math.max(1, 61 - os.time() % 60), tick)
+end
+
 function KindleDash:buildScreen(img_path, w, h)
     local dash = self
     local img = ImageWidget:new{
@@ -625,8 +646,43 @@ function KindleDash:buildScreen(img_path, w, h)
         scale_factor = 0,
         file_do_cache = false,
     }
+    local content = img
+    local clock_widget
+    local ok_widgets, TextWidget, OverlapGroup, LeftContainer, HorizontalGroup, HorizontalSpan, Font = pcall(function()
+        return require("ui/widget/textwidget"), require("ui/widget/overlapgroup"),
+            require("ui/widget/container/leftcontainer"), require("ui/widget/horizontalgroup"),
+            require("ui/widget/horizontalspan"), require("ui/font")
+    end)
+    if ok_widgets then
+        clock_widget = TextWidget:new{
+            text = os.date("%H:%M"),
+            face = Font:getFace("cfont", Screen:scaleBySize(142)),
+            bold = true,
+            padding = 0,
+        }
+        content = OverlapGroup:new{
+            dimen = Geom:new{ w = w, h = h },
+            img,
+            LeftContainer:new{
+                dimen = Geom:new{ w = w, h = Screen:scaleBySize(180) },
+                HorizontalGroup:new{
+                    HorizontalSpan:new{ width = Screen:scaleBySize(40) },
+                    clock_widget,
+                },
+            },
+        }
+    end
     local container = InputContainer:new{ dimen = Geom:new{ w = w, h = h } }
-    container[1] = img
+    container[1] = content
+    container._clock_text = os.date("%H:%M")
+    function container:updateLocalClock()
+        if not clock_widget then return end
+        local value = os.date("%H:%M")
+        if value == self._clock_text then return end
+        self._clock_text = value
+        if clock_widget.setText then clock_widget:setText(value) else clock_widget.text = value end
+        UIManager:setDirty(self, "ui")
+    end
     -- 吃手势，防止 KOReader 的翻页/退出穿透到看板上。
     container.ges_events = {
         TapScroll = { GestureRange:new{ ges = "tap", range = function() return container.dimen end } },
@@ -648,6 +704,7 @@ function KindleDash:buildScreen(img_path, w, h)
         dash._busy = false
         dash:releaseNetwork()
         dash.dash_widget = nil
+        dash:cancelLocalClock()
         -- 看板不在了：停止定时刷新，也不再阻止设备休眠。
         dash:holdScreen(false)
         dash:armAutoRefresh()
@@ -659,6 +716,7 @@ function KindleDash:buildScreen(img_path, w, h)
         dash._busy = false
         dash:releaseNetwork()
         dash.dash_widget = nil
+        dash:cancelLocalClock()
         dash:holdScreen(false)
         dash:armAutoRefresh()
         UIManager:close(self)
@@ -689,6 +747,7 @@ function KindleDash:showDashboard(path, offline)
     UIManager:show(result)
     if previous then UIManager:close(previous) end
     self.dash_widget = result
+    self:armLocalClock()
     -- 看板已在屏上：进入常亮模式，让 UI 定时器能按点刷新。
     if self:option("hold_screen", true) and not self._suspended then
         self:holdScreen(true)
@@ -938,6 +997,7 @@ end
 
 function KindleDash:onSuspend()
     self:releaseNetwork()
+    self:cancelLocalClock()
     self._suspended = true
     if self._resume_tick then UIManager:unschedule(self._resume_tick) end
     if self._auto_timer then UIManager:unschedule(self._auto_timer) end
@@ -980,18 +1040,21 @@ function KindleDash:onResume()
     self._resume_tick = function()
         if self.dash_widget and not self._suspended then
             if self:option("hold_screen", true) then self:holdScreen(true) end
+            pcall(function() self.dash_widget:updateLocalClock() end)
             self:requestRefresh(true, false)
         end
     end
     -- Wi-Fi 恢复是异步的，稍等再刷。
     UIManager:scheduleIn(5, self._resume_tick)
     self:armAutoRefresh()
+    self:armLocalClock()
     self:record("resume")
 end
 
 function KindleDash:onCloseWidget()
     self._generation = (self._generation or 0) + 1
     self:releaseNetwork()
+    self:cancelLocalClock()
     -- 只收定时器，不改 auto_on：这个回调不只退出时触发（插件从菜单注销等也会），
     -- 一旦把 auto_on 置 false，自动刷新会静默关停到下次重启，且没有任何提示。
     if self._auto_timer then UIManager:unschedule(self._auto_timer); self._auto_timer = nil end

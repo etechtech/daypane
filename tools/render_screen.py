@@ -305,10 +305,7 @@ def load_quotes():
 # ---------- 模块 ----------
 def draw_header(draw, d, y):
     now = display_now()
-    ts = now.strftime('%H:%M')
     city = ((d.get('weather') or {}).get('city') or 'Toronto').upper()
-    ft = f(142, bold=True)
-    draw.text((PAD, y - 24), ts, fill=BLACK, font=ft)
     right = SCREEN_W - PAD
     city_font = f(38, bold=True)
     draw.text((right - tw(draw, city, city_font), y + 36), city, fill=BLACK, font=city_font)
