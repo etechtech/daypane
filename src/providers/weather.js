@@ -21,8 +21,8 @@ export async function getWeather() {
   const url =
     `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
     `&current=temperature_2m,weather_code,relative_humidity_2m` +
-    `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
-    `&timezone=auto&forecast_days=1`;
+    `&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset` +
+    `&timezone=auto&forecast_days=5`;
 
   return cached('weather', 10 * 60 * 1000, async () => {
     const r = await fetchJson(url);
@@ -38,6 +38,15 @@ export async function getWeather() {
       text: wmo(c.weather_code),
       high: d.temperature_2m_max?.[0],
       low: d.temperature_2m_min?.[0],
+      sunrise: d.sunrise?.[0],
+      sunset: d.sunset?.[0],
+      forecast: (d.time || []).slice(0, 5).map((date, i) => ({
+        date,
+        code: d.weather_code?.[i],
+        text: wmo(d.weather_code?.[i]),
+        high: d.temperature_2m_max?.[i],
+        low: d.temperature_2m_min?.[i]
+      })),
       source: 'open-meteo'
     };
   });

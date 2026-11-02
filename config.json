@@ -4,15 +4,25 @@
     "lat": 43.6532,
     "lon": -79.3832
   },
+  "transit": {
+    "stopId": "",
+    "stopName": "TTC stop not configured",
+    "routes": [],
+    "direction": null,
+    "directionLabel": ""
+  },
   "display": {
-    "preset": "minimal",
+    "preset": "toronto",
     "modules": [
       "weather",
-      "clocks"
+      "forecast",
+      "calendar",
+      "sun",
+      "transit"
     ],
     "width": 1072,
     "height": 1448,
-    "fontScale": 1.5,
+    "fontScale": 1,
     "timezone": "America/Toronto",
     "temperatureUnit": "C"
   }

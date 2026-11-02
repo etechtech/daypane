@@ -239,7 +239,7 @@ saved={}; G_reader_settings.readSetting=function() return 'zh_CN' end
 assert(d:loadLanguage()=='zh')
 for _, filename in ipairs({'screen.png', 'screen-en.png'}) do
     saved={cloud='https://shenliucn-prog.github.io/shawn-kanban/'..filename}
-    local expected='https://shenliucn-prog.github.io/daypane/'..filename
+    local expected='https://etechtech.github.io/daypane/'..filename
     assert(d:loadCloud()==expected and saved.cloud==expected)
     assert(d:loadCloud()==expected, 'migration must be idempotent')
 end

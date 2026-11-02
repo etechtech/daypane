@@ -50,6 +50,11 @@ function buildConfig() {
     fxBase: fileConfig.fxBase ?? 'USD',
     stocks: fileConfig.stocks ?? DEFAULT_STOCKS,
     clocks: fileConfig.clocks ?? DEFAULT_CLOCKS,
+    transit: {
+      stopId: '', stopName: 'TTC stop not configured', routes: [],
+      direction: null, directionLabel: '',
+      ...(fileConfig.transit || {})
+    },
 
     claudeCap: Number(fileConfig.claudeCap ?? 1000),
     codexCap: Number(fileConfig.codexCap ?? 500),

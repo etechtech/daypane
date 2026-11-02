@@ -7,6 +7,7 @@ import { getClocks } from './providers/clocks.js';
 import { getFx } from './providers/fx.js';
 import { getNews } from './providers/news.js';
 import { getMlb } from './providers/mlb.js';
+import { getTransit } from './providers/transit.js';
 import { getReported } from './reported.js';
 import { getConfig } from './config.js';
 
@@ -42,13 +43,14 @@ export async function buildDashboard(db) {
   const cfg = getConfig();
   const cloud = cfg.mode === 'cloud';
 
-  const [weather, stocks, fx, news, mlb, newsEn] = await Promise.all([
+  const [weather, stocks, fx, news, mlb, newsEn, transit] = await Promise.all([
     getWeather(),
     getStocks(),
     getFx(),
     getNews(),
     getMlb(),
-    getNews('en')
+    getNews('en'),
+    getTransit()
   ]);
 
   const reported = cloud ? getReported() : null;
@@ -71,6 +73,7 @@ export async function buildDashboard(db) {
     fx,
     news,
     newsEn,
-    mlb
+    mlb,
+    transit
   };
 }

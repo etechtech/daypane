@@ -5,7 +5,7 @@
 16 级灰度（GRAY=128 / LIGHT_GRAY=200）最终 Floyd-Steinberg 抖动转 1-bit PNG。
 静态数据（句子库）从 data/ 读；新闻/节日/时钟/额度均由服务端提供。
 """
-import sys, os, json, math, re, urllib.request, argparse
+import sys, os, json, math, re, urllib.request, argparse, calendar
 from datetime import datetime
 from zoneinfo import ZoneInfo
 try:
@@ -32,6 +32,10 @@ LABELS = {
     '剩余': 'Remaining',
     '未安装': 'Not installed', '不可用': 'Unavailable', '天气': 'Weather',
     '天气不可用': 'Weather unavailable', '市场': 'Markets', '世界时钟': 'World Clocks',
+    '五日预报': '5-Day Forecast', '日照': 'Sunrise & Sunset', '交通': 'TTC Arrivals',
+    '暂无到站预测': 'No upcoming predictions',
+    '在 config.json 设置 transit.stopId（未显示虚构数据）': 'Set transit.stopId in config.json — no made-up arrivals',
+    '实时数据暂不可用': 'Live predictions unavailable',
     '时钟不可用': 'Clocks unavailable', 'MLB · 道奇 / 教士': 'MLB · LAD / SD (UTC+8)',
     '赛程暂不可用': 'Schedule unavailable', '胜': 'W', '负': 'L',
     '无近期战报': 'No recent game', '今日一句': 'Daily Thought',
@@ -81,6 +85,8 @@ def localized_data(data):
     w = d.get('weather') or {}
     w['city'] = w.get('cityEn') or CITY_EN.get(w.get('city'), w.get('city', ''))
     w['text'] = WEATHER_EN.get(w.get('code'), 'Unknown')
+    for day in w.get('forecast') or []:
+        day['text'] = WEATHER_EN.get(day.get('code'), 'Unknown')
     for stock in (d.get('stocks') or {}).get('items', []):
         stock['label'] = stock.get('labelEn') or stock.get('sym', '')
     for clock in (d.get('clocks') or {}).get('items', []):
@@ -296,22 +302,20 @@ def load_quotes():
 # ---------- 模块 ----------
 def draw_header(draw, d, y):
     now = display_now()
-    day = now.strftime('%d')
-    wd = '一二三四五六日'[now.weekday()]
-    mw = (['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.month-1] + ' ' + ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][now.weekday()]) if LANG == 'en' else '%d月 周%s' % (now.month, wd)
     ts = now.strftime('%H:%M')
-    city = (d.get('weather') or {}).get('city') or ''
-    fd = f(F_DATE, bold=True)
-    draw.text((PAD, y), day, fill=BLACK, font=fd)
-    dw = tw(draw, day, fd)
-    draw.text((PAD + dw + 24, y + 16), mw, fill=BLACK, font=f(F_MONTH, bold=True))
-    ft = f(F_TIME, bold=True)
-    tw_s = tw(draw, ts, ft)
-    draw.text((SCREEN_W - PAD - tw_s, y - 6), ts, fill=BLACK, font=ft)
-    if city:
-        fs = f(F_SMALL)
-        draw.text((SCREEN_W - PAD - tw(draw, city, fs), y + F_TIME + 6), city, fill=GRAY, font=fs)
-    return y + round(112 * (LAYOUT["fontScale"] if LAYOUT else 1))
+    city = ((d.get('weather') or {}).get('city') or 'Toronto').upper()
+    ft = f(142, bold=True)
+    draw.text((PAD, y - 24), ts, fill=BLACK, font=ft)
+    right = SCREEN_W - PAD
+    city_font = f(38, bold=True)
+    draw.text((right - tw(draw, city, city_font), y + 36), city, fill=BLACK, font=city_font)
+    if LANG == 'en':
+        date_line = '%s %d, %d' % (now.strftime('%A, %B'), now.day, now.year)
+    else:
+        date_line = '%d年%d月%d日 周%s' % (now.year, now.month, now.day, '一二三四五六日'[now.weekday()])
+    date_font = f(40, bold=True)
+    draw.text((PAD, y + 126), date_line, fill=BLACK, font=date_font)
+    return y + 215
 
 def stamp_label(src):
     """把模块数据里的 fetchedAt 变成右上角的时间标注。
@@ -447,6 +451,114 @@ def draw_weather(draw, d, y):
     else:
         draw.text((PAD, y), tr('天气不可用'), fill=GRAY, font=f(F_SMALL))
         return y + F_SMALL + 8
+
+def _day_name(iso_date):
+    try:
+        dt = datetime.fromisoformat(iso_date)
+        return dt.strftime('%a').upper() if LANG == 'en' else '一二三四五六日'[dt.weekday()]
+    except (TypeError, ValueError):
+        return '--'
+
+def draw_forecast(draw, d, y):
+    w = d.get('weather') or {}
+    y = draw_title(draw, y, tr('五日预报'), w)
+    days = (w.get('forecast') or [])[:5]
+    if not days:
+        draw.text((PAD, y), tr('天气不可用'), fill=GRAY, font=f(F_SMALL))
+        return y + F_SMALL + 8
+    col = CONTENT_W / 5
+    for i, day in enumerate(days):
+        x0 = round(PAD + i * col)
+        x1 = round(PAD + (i + 1) * col)
+        if i:
+            draw.line([(x0, y), (x0, y + 104)], fill=LIGHT_GRAY, width=2)
+        label = _day_name(day.get('date'))
+        label_font = f(28, bold=True)
+        draw.text((x0 + (x1 - x0 - tw(draw, label, label_font)) / 2, y), label, fill=BLACK, font=label_font)
+        temps = '%s° / %s°' % (fnum(day.get('high')), fnum(day.get('low')))
+        temp_font = f(31, bold=True)
+        draw.text((x0 + (x1 - x0 - tw(draw, temps, temp_font)) / 2, y + 37), temps, fill=BLACK, font=temp_font)
+        desc = clip(draw, day.get('text') or '', f(22), x1 - x0 - 12)
+        draw.text((x0 + (x1 - x0 - tw(draw, desc, f(22))) / 2, y + 78), desc, fill=GRAY, font=f(22))
+    return y + 110
+
+def draw_calendar(draw, d, y):
+    now = display_now()
+    title = now.strftime('%B %Y') if LANG == 'en' else '%d年%d月' % (now.year, now.month)
+    y = draw_title(draw, y, title)
+    cal = calendar.Calendar(firstweekday=6)
+    weeks = cal.monthdayscalendar(now.year, now.month)
+    while len(weeks) < 6:
+        weeks.append([0] * 7)
+    labels = ['SUN','MON','TUE','WED','THU','FRI','SAT'] if LANG == 'en' else list('日一二三四五六')
+    col = CONTENT_W / 7
+    for i, label in enumerate(labels):
+        ff = f(22, bold=True)
+        x = PAD + i * col + (col - tw(draw, label, ff)) / 2
+        draw.text((x, y), label, fill=GRAY, font=ff)
+    y += 31
+    cell_h = 66
+    number_font = f(30, bold=True)
+    for row, week in enumerate(weeks):
+        cy = y + row * cell_h
+        for col_i, day in enumerate(week):
+            if not day:
+                continue
+            cx = PAD + col_i * col
+            text = str(day)
+            tx = cx + (col - tw(draw, text, number_font)) / 2
+            if day == now.day:
+                box = [cx + 30, cy + 2, cx + col - 30, cy + 42]
+                draw.rounded_rectangle(box, radius=8, fill=BLACK)
+                draw.text((tx, cy + 3), text, fill=WHITE, font=number_font)
+            else:
+                draw.text((tx, cy + 3), text, fill=BLACK, font=number_font)
+        if row < 5:
+            draw.line([(PAD, cy + 46), (SCREEN_W - PAD, cy + 46)], fill=LIGHT_GRAY, width=1)
+    return y + 6 * cell_h
+
+def _clock_part(value):
+    if not value:
+        return '--:--'
+    try:
+        return datetime.fromisoformat(value).strftime('%H:%M')
+    except (TypeError, ValueError):
+        return str(value)[-5:]
+
+def draw_sun(draw, d, y):
+    w = d.get('weather') or {}
+    y = draw_title(draw, y, tr('日照'), w)
+    sunrise, sunset = _clock_part(w.get('sunrise')), _clock_part(w.get('sunset'))
+    line = ('Sunrise %s     Sunset %s' if LANG == 'en' else '日出 %s     日落 %s') % (sunrise, sunset)
+    draw.text((PAD, y), line, fill=BLACK, font=f(38, bold=True))
+    return y + 48
+
+def draw_transit(draw, d, y):
+    ttc = d.get('transit') or {}
+    y = draw_title(draw, y, tr('交通'), ttc)
+    if not ttc.get('configured'):
+        draw.text((PAD, y), tr('在 config.json 设置 transit.stopId（未显示虚构数据）'), fill=GRAY, font=f(27))
+        return y + 38
+    stop = ttc.get('stopName') or ('Stop ' + str(ttc.get('stopId') or ''))
+    draw.text((PAD, y), clip(draw, stop, f(31, bold=True), CONTENT_W), fill=BLACK, font=f(31, bold=True))
+    y += 42
+    items = ttc.get('items') or []
+    if not ttc.get('ok'):
+        draw.text((PAD, y), tr('实时数据暂不可用'), fill=GRAY, font=f(F_SMALL))
+        return y + F_SMALL + 4
+    if not items:
+        draw.text((PAD, y), tr('暂无到站预测'), fill=GRAY, font=f(F_SMALL))
+        return y + F_SMALL + 4
+    chunks = []
+    for item in items[:5]:
+        direction = item.get('directionLabel') or ''
+        route = str(item.get('route') or '?')
+        mins = item.get('minutes')
+        eta = ('due' if LANG == 'en' else '到站') if mins == 0 else '%s min' % mins
+        chunks.append('%s%s %s' % (route, (' ' + direction) if direction else '', eta))
+    line = '   ·   '.join(chunks)
+    draw.text((PAD, y), clip(draw, line, f(29, bold=True), CONTENT_W), fill=BLACK, font=f(29, bold=True))
+    return y + 42
 
 def draw_market(draw, d, y):
     st = (d.get('stocks') or {}).get('items', [])
@@ -593,6 +705,10 @@ def render(d, out_path=None, language="zh"):
         'news': lambda y: draw_news(draw, d, y),
         'ai': lambda y: draw_ai(draw, d, y),
         'weather': lambda y: draw_weather(draw, d, y),
+        'forecast': lambda y: draw_forecast(draw, d, y),
+        'calendar': lambda y: draw_calendar(draw, d, y),
+        'sun': lambda y: draw_sun(draw, d, y),
+        'transit': lambda y: draw_transit(draw, d, y),
         'market': lambda y: draw_market(draw, d, y),
         'clocks': lambda y: draw_clocks(draw, d, y),
         'mlb': lambda y: draw_mlb(draw, d, y),
