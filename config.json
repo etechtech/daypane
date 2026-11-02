@@ -5,11 +5,13 @@
     "lon": -79.3832
   },
   "transit": {
-    "stopId": "",
-    "stopName": "TTC stop not configured",
-    "routes": [],
+    "stopId": "10766",
+    "stopName": "Dovercourt Rd at Dupont St",
+    "routes": [
+      "161"
+    ],
     "direction": null,
-    "directionLabel": ""
+    "directionLabel": "Eastbound"
   },
   "display": {
     "preset": "toronto",
