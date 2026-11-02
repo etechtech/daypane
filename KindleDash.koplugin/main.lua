@@ -625,43 +625,8 @@ function KindleDash:buildScreen(img_path, w, h)
         scale_factor = 0,
         file_do_cache = false,
     }
-    local power = Device:getPowerDevice()
-    local battery_text = ""
-    if Device.hasBattery and Device:hasBattery() and power and power.getCapacity then
-        local ok, capacity = pcall(function() return power:getCapacity() end)
-        if ok and capacity then
-            local charging = false
-            if power.isCharging then pcall(function() charging = power:isCharging() end) end
-            battery_text = string.format("%sBAT %d%%", charging and "+" or "", capacity)
-        end
-    end
-    local layers = img
-    local ok_widgets, TextWidget, OverlapGroup, RightContainer, HorizontalGroup, HorizontalSpan, Font = pcall(function()
-        return require("ui/widget/textwidget"), require("ui/widget/overlapgroup"),
-            require("ui/widget/container/rightcontainer"), require("ui/widget/horizontalgroup"),
-            require("ui/widget/horizontalspan"), require("ui/font")
-    end)
-    if battery_text ~= "" and ok_widgets then
-        local battery = TextWidget:new{
-            text = battery_text,
-            face = Font:getFace("cfont", Screen:scaleBySize(24)),
-            bold = true,
-            padding = 0,
-        }
-        layers = OverlapGroup:new{
-            dimen = Geom:new{ w = w, h = h },
-            img,
-            RightContainer:new{
-                dimen = Geom:new{ w = w, h = Screen:scaleBySize(52) },
-                HorizontalGroup:new{
-                    battery,
-                    HorizontalSpan:new{ width = Screen:scaleBySize(20) },
-                },
-            },
-        }
-    end
     local container = InputContainer:new{ dimen = Geom:new{ w = w, h = h } }
-    container[1] = layers
+    container[1] = img
     -- 吃手势，防止 KOReader 的翻页/退出穿透到看板上。
     container.ges_events = {
         TapScroll = { GestureRange:new{ ges = "tap", range = function() return container.dimen end } },
