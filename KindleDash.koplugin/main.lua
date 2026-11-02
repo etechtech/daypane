@@ -38,7 +38,10 @@ local JSON = require("json")
 -- 网络请求超时：电脑关机时不要让用户等太久，8 秒无响应就切换下一级。
 http.TIMEOUT = 8
 
-local VERSION = "0.3.5"
+local VERSION = "0.3.6"
+-- KOReader scales UI font sizes for the device DPI. 96 becomes roughly the
+-- same visual height as the renderer's 142px clock on this 1072px Kindle.
+local LOCAL_CLOCK_FONT_SIZE = 96
 local REFRESH_SEC = 30 * 60
 local MAX_IMAGE = 4 * 1024 * 1024
 local DEFAULT_HOST = ""
@@ -656,7 +659,7 @@ function KindleDash:buildScreen(img_path, w, h)
     if ok_widgets then
         clock_widget = TextWidget:new{
             text = os.date("%H:%M"),
-            face = Font:getFace("cfont", Screen:scaleBySize(142)),
+            face = Font:getFace("cfont", Screen:scaleBySize(LOCAL_CLOCK_FONT_SIZE)),
             bold = true,
             padding = 0,
         }
@@ -664,7 +667,7 @@ function KindleDash:buildScreen(img_path, w, h)
             dimen = Geom:new{ w = w, h = h },
             img,
             LeftContainer:new{
-                dimen = Geom:new{ w = w, h = Screen:scaleBySize(180) },
+                dimen = Geom:new{ w = w, h = Screen:scaleBySize(125) },
                 HorizontalGroup:new{
                     HorizontalSpan:new{ width = Screen:scaleBySize(40) },
                     clock_widget,
